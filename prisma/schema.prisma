@@ -1,0 +1,106 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MessageRole {
+  student
+  assistant
+}
+
+enum Category {
+  academic
+  financial
+  visa
+  housing
+  health
+  other
+}
+
+enum Urgency {
+  low
+  medium
+  high
+  critical
+}
+
+enum Disposition {
+  handle_now
+  clarify
+  escalate
+}
+
+enum CaseStatus {
+  new
+  in_progress
+  resolved
+}
+
+model Conversation {
+  id           String   @id @default(uuid())
+  studentName  String
+  studentEmail String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  messages Message[]
+  cases Case[]
+}
+
+model Message {
+  id             String      @id @default(uuid())
+  conversationId String
+  content        String
+  role           MessageRole
+
+  createdAt    DateTime     @default(now())
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  triage Triage?
+
+  @@index([conversationId])
+}
+
+model Triage {
+  id           String      @id @default(uuid())
+  messageId    String      @unique
+  category     Category
+  urgency      Urgency
+  safeguarding Boolean
+  disposition  Disposition
+  usedFallback Boolean     @default(false) /* true when validation failed and code forced escalate */
+  rawModel     Json? // raw model output, kept for audit 
+  createdAt    DateTime    @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+}
+
+model Case {
+  id String @id @default(uuid())
+
+  conversationId String
+  status         CaseStatus @default(new)
+  urgency        Urgency
+
+  safeguarding Boolean   @default(false)
+  summary      String
+  claimedBy    String? // staff identifier; null = unclaimed
+  claimedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([status, safeguarding, urgency, createdAt])
+}
