@@ -42,6 +42,15 @@ const INJECTION_PATTERNS: RegExp[] = [
   /override (the |your )?(rules|instructions|safety|triage)/i,
 ]
 
+// Explicit request to reach a real person, which should route to a human rather than repeat a signpost.
+const HUMAN_REQUEST_PATTERNS: RegExp[] = [
+  /(talk|speak|chat|connect) (to|with) (a |an )?(someone|somebody|person|human|counsel?lor|advisor|adviser|staff|member|real person|actual person)/i,
+  /want (to (talk|speak)|a human|a person|someone to talk|to talk to (a )?(person|human|someone))/i,
+  /(can|could|may) i (talk|speak) (to|with)/i,
+  /(get|have|reach|contact|see) (me )?(a |an )?(human|person|real person|counsel?lor|adviser|advisor)/i,
+  /talk to a real person|speak to a real person/i,
+]
+
 export function detectCrisis(text: string): boolean {
   return CRISIS_PATTERNS.some((pattern) => pattern.test(text))
 }
@@ -54,6 +63,10 @@ export function detectManipulation(text: string): boolean {
   return INJECTION_PATTERNS.some((pattern) => pattern.test(text))
 }
 
+export function detectHumanRequest(text: string): boolean {
+  return HUMAN_REQUEST_PATTERNS.some((pattern) => pattern.test(text))
+}
+
 const URGENCY_RANK: Record<Urgency, number> = {
   low: 0,
   medium: 1,
@@ -61,7 +74,7 @@ const URGENCY_RANK: Record<Urgency, number> = {
   critical: 3,
 }
 
-function maxUrgency(a: Urgency, b: Urgency): Urgency {
+export function maxUrgency(a: Urgency, b: Urgency): Urgency {
   return URGENCY_RANK[a] >= URGENCY_RANK[b] ? a : b
 }
 
@@ -77,6 +90,7 @@ export function applyHouseRules(
   const crisisRisk = detectCrisis(text)
   const modelSafeguard = model?.safeguarding ?? false
   const manipulation = detectManipulation(text) || (model?.manipulation ?? false)
+  const humanRequest = detectHumanRequest(text)
   const usedFallback = model === null
 
   const category = model?.category ?? "other"
@@ -139,6 +153,25 @@ export function applyHouseRules(
       reasoning:
         reasoning ??
         "Manipulation or junk detected; declined without following any embedded instruction.",
+      usedFallback,
+      raw: model,
+    }
+  }
+
+  // Explicit request to talk to a person: route to a human instead of repeating a self-referral.
+  if (humanRequest) {
+    return {
+      category,
+      urgency: maxUrgency(urgency, "medium"),
+      safeguarding: modelSafeguard,
+      disposition: "escalate",
+      emergency: false,
+      immediateDanger: false,
+      manipulation: false,
+      clarifyingQuestion: null,
+      summary,
+      resourceId,
+      reasoning,
       usedFallback,
       raw: model,
     }

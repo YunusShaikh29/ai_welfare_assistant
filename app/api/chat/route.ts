@@ -5,6 +5,7 @@ import { Prisma } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 import { generateHandleNowReply } from "@/lib/reply"
 import { runTriage, type TriageMessage } from "@/lib/triage"
+import { maxUrgency } from "@/lib/triage/house-rules"
 import type { Disposition, TriageResult } from "@/lib/triage/schema"
 
 export const runtime = "nodejs"
@@ -126,17 +127,41 @@ export async function POST(request: Request) {
   let caseId: string | null = null
   if (disposition === "escalate") {
     reply = composeEscalationMessage(triage)
-    const created = await prisma.case.create({
-      data: {
-        conversationId,
-        status: "new",
-        urgency: triage.urgency,
-        safeguarding: triage.safeguarding,
-        summary: triage.summary?.trim() || fallbackSummary(history),
-      },
-      select: { id: true },
+
+    // One open case per conversation: update the existing open case instead of creating a duplicate.
+    const openCase = await prisma.case.findFirst({
+      where: { conversationId, status: { not: "resolved" } },
+      orderBy: { createdAt: "desc" },
     })
-    caseId = created.id
+
+    if (openCase) {
+      const newSummary = triage.summary?.trim()
+      const updated = await prisma.case.update({
+        where: { id: openCase.id },
+        data: {
+          urgency: maxUrgency(openCase.urgency, triage.urgency),
+          safeguarding: openCase.safeguarding || triage.safeguarding,
+          summary:
+            newSummary && newSummary !== openCase.summary
+              ? `${openCase.summary}\n\nUpdate: ${newSummary}`
+              : openCase.summary,
+        },
+        select: { id: true },
+      })
+      caseId = updated.id
+    } else {
+      const created = await prisma.case.create({
+        data: {
+          conversationId,
+          status: "new",
+          urgency: triage.urgency,
+          safeguarding: triage.safeguarding,
+          summary: triage.summary?.trim() || fallbackSummary(history),
+        },
+        select: { id: true },
+      })
+      caseId = created.id
+    }
   }
 
   await prisma.message.create({
