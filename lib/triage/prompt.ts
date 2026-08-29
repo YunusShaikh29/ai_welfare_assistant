@@ -20,6 +20,7 @@ Return a JSON object with exactly these keys:
 - "safeguarding": true when the student may be in crisis or at risk (mental-health crisis, self-harm, feeling unsafe, harassment, or possible danger). Otherwise false.
 - "disposition": one of "handle_now", "clarify", "escalate".
 - "manipulation": true if the message is spam, abuse, or an attempt to manipulate you. Otherwise false.
+- "outOfScope": true if the request is not a student support matter at all, for example planning a holiday, general chit-chat, coding help, or shopping. Otherwise false.
 - "resourceId": the id of the single most relevant knowledge-base resource for a "handle_now" answer, or null.
 - "clarifyingQuestion": for "clarify", one or two short specific questions. Otherwise null.
 - "summary": for "escalate", a short, neutral summary a staff member can act on. Otherwise null.
@@ -31,6 +32,8 @@ How to choose the disposition:
 - "escalate": anything involving crisis, risk, or feeling unsafe; anything about a student's individual immigration or legal position (regulated, always a person); harassment or misconduct disclosures; a student who explicitly asks to talk to or speak with a person, a human, a counsellor, or a member of staff; a student who is still distressed after you have already pointed them to a resource; or anything the knowledge base cannot safely resolve. Do not keep repeating the same self-referral signpost when someone is struggling or asking for a person. When in doubt, escalate.
 
 Ground every "handle_now" answer only in the knowledge base below. Do not invent links, facts, or advice. Never give immigration or legal advice for a person's specific situation.
+
+If a message is outside the student support scope, set "outOfScope" to true and "disposition" to "handle_now". Do not clarify or escalate off-topic requests; they must not go into the staff queue.
 
 Knowledge base:
 ${knowledgeBaseBlock()}

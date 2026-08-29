@@ -91,6 +91,7 @@ export function applyHouseRules(
   const modelSafeguard = model?.safeguarding ?? false
   const manipulation = detectManipulation(text) || (model?.manipulation ?? false)
   const humanRequest = detectHumanRequest(text)
+  const outOfScope = model?.outOfScope ?? false
   const usedFallback = model === null
 
   const category = model?.category ?? "other"
@@ -109,6 +110,7 @@ export function applyHouseRules(
       emergency: true,
       immediateDanger: true,
       manipulation,
+      outOfScope: false,
       clarifyingQuestion: null,
       summary,
       resourceId,
@@ -128,6 +130,7 @@ export function applyHouseRules(
       emergency: crisisRisk,
       immediateDanger: false,
       manipulation,
+      outOfScope: false,
       clarifyingQuestion: null,
       summary,
       resourceId,
@@ -147,6 +150,7 @@ export function applyHouseRules(
       emergency: false,
       immediateDanger: false,
       manipulation: true,
+      outOfScope: false,
       clarifyingQuestion: null,
       summary: null,
       resourceId: null,
@@ -168,10 +172,32 @@ export function applyHouseRules(
       emergency: false,
       immediateDanger: false,
       manipulation: false,
+      outOfScope: false,
       clarifyingQuestion: null,
       summary,
       resourceId,
       reasoning,
+      usedFallback,
+      raw: model,
+    }
+  }
+
+  // Outside the student support scope: decline politely, do not clarify forever or escalate junk to staff.
+  if (outOfScope) {
+    return {
+      category: "other",
+      urgency: "low",
+      safeguarding: false,
+      disposition: "handle_now",
+      emergency: false,
+      immediateDanger: false,
+      manipulation: false,
+      outOfScope: true,
+      clarifyingQuestion: null,
+      summary: null,
+      resourceId: null,
+      reasoning:
+        reasoning ?? "Request is outside the student support scope; declined.",
       usedFallback,
       raw: model,
     }
@@ -189,6 +215,7 @@ export function applyHouseRules(
     emergency: false,
     immediateDanger: false,
     manipulation: false,
+    outOfScope: false,
     clarifyingQuestion: disposition === "clarify" ? model?.clarifyingQuestion ?? null : null,
     summary,
     resourceId,

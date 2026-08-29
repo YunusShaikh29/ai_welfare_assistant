@@ -24,6 +24,7 @@ export const modelTriageSchema = z.object({
   safeguarding: z.boolean(),
   disposition: z.enum(DISPOSITIONS),
   manipulation: z.boolean().default(false),
+  outOfScope: z.boolean().default(false),
   resourceId: z.string().trim().max(60).nullable().default(null),
   clarifyingQuestion: z.string().trim().max(300).nullable().default(null),
   summary: z.string().trim().max(800).nullable().default(null),
@@ -41,6 +42,7 @@ export interface TriageResult {
   emergency: boolean // share the Samaritans line
   immediateDanger: boolean // share 999
   manipulation: boolean
+  outOfScope: boolean
   clarifyingQuestion: string | null
   summary: string | null
   resourceId: string | null

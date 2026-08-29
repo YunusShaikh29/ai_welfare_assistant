@@ -23,6 +23,23 @@ function lastStudentMessage(messages: TriageMessage[]): string {
   return ""
 }
 
+// Parse and validate a raw model response; returns null on anything invalid.
+export function parseModelResponse(
+  content: string | null | undefined
+): ModelTriage | null {
+  if (!content) return null
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(content)
+  } catch {
+    return null
+  }
+
+  const result = modelTriageSchema.safeParse(parsed)
+  return result.success ? result.data : null
+}
+
 async function callModel(messages: TriageMessage[]): Promise<ModelTriage | null> {
   const groq = getGroq()
 
@@ -40,31 +57,26 @@ async function callModel(messages: TriageMessage[]): Promise<ModelTriage | null>
     ],
   })
 
-  const content = completion.choices[0]?.message?.content
-  if (!content) return null
-
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(content)
-  } catch {
-    return null
-  }
-
-  const result = modelTriageSchema.safeParse(parsed)
-  return result.success ? result.data : null
+  return parseModelResponse(completion.choices[0]?.message?.content)
 }
+
+export type ModelCaller = (messages: TriageMessage[]) => Promise<ModelTriage | null>
 
 /*
  * Triage a message using the model, then enforce the house rules in code. On any model
  * failure (invalid JSON, schema mismatch, timeout, or unavailable) it falls back to a
  * safe escalate, while the code-side crisis and injection checks still run.
+ * `callModelFn` is injectable so tests and probes can stub the model deterministically.
  */
-export async function runTriage(input: TriageInput): Promise<TriageResult> {
+export async function runTriage(
+  input: TriageInput,
+  callModelFn: ModelCaller = callModel
+): Promise<TriageResult> {
   const text = lastStudentMessage(input.messages)
 
   let model: ModelTriage | null = null
   try {
-    model = await callModel(input.messages)
+    model = await callModelFn(input.messages)
   } catch {
     model = null
   }

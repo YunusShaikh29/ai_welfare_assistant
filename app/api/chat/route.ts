@@ -18,6 +18,9 @@ const bodySchema = z.object({
 const MANIPULATION_REPLY =
   "I'm here to help with student support questions like money, housing, visas, academic issues, or wellbeing. I can't action that request, but if there's something you need help with, tell me what's going on and I'll do my best."
 
+const OUT_OF_SCOPE_REPLY =
+  "I'm here to help with student support, things like money, housing, visas, academic questions, or wellbeing. That one is outside what I can help with, but if there's a student support matter on your mind, tell me and I'll do my best."
+
 function composeEscalationMessage(triage: TriageResult): string {
   const parts = [
     "Thank you for telling me. This is something I'd like a member of the team to help you with, so I'm passing it to them now and they'll follow up by email.",
@@ -109,6 +112,8 @@ export async function POST(request: Request) {
 
   if (triage.manipulation) {
     reply = MANIPULATION_REPLY
+  } else if (triage.outOfScope) {
+    reply = OUT_OF_SCOPE_REPLY
   } else if (disposition === "handle_now") {
     try {
       reply = await generateHandleNowReply(history, triage)
