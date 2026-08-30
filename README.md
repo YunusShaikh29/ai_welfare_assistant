@@ -110,5 +110,5 @@ When a student writes in, AI model returns a structured decision: a category, an
 
 ## Notes
 
-- Conversations are not resumed across visits. Without verified identity, deduplicating a returning student on an unverified email risks mixing people up, which is dangerous in a safeguarding context, so each visit is a fresh conversation. See `DECISIONS.md`.
+- See `DECISIONS.md`.
 - Replies are returned as a single response rather than streamed. This is a deliberate scope choice for this build.
