@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json(conversation, { status: 201 })
-  } catch (error: any) {
+  } catch (error) {
     console.error("conversations POST failed:", error)
     return NextResponse.json(
       { error: "Could not start the conversation. Please try again." },

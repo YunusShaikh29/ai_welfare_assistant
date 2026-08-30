@@ -6,7 +6,6 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { SparklesIcon } from "@hugeicons/core-free-icons"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { ChatSkeleton } from "@/components/chat/chat-skeleton"
 import { MessageBubble } from "@/components/chat/message-bubble"
 import { MessageComposer } from "@/components/chat/message-composer"
 import { TypingIndicator } from "@/components/chat/typing-indicator"
@@ -32,7 +31,6 @@ export default function ChatPage() {
   const router = useRouter()
   const [student, setStudent] = React.useState<Student | null>(null)
   const [messages, setMessages] = React.useState<ChatMessage[]>([])
-  const [isLoadingHistory, setIsLoadingHistory] = React.useState(true)
   const [isSending, setIsSending] = React.useState(false)
   const scrollRef = React.useRef<HTMLDivElement>(null)
 
@@ -46,20 +44,27 @@ export default function ChatPage() {
     const parsed = JSON.parse(raw) as Student
     setStudent(parsed)
 
-    // Placeholder for loading an existing conversation; replace with a real fetch when wired.
-    const timer = setTimeout(() => {
-      const firstName = parsed.name.trim().split(/\s+/)[0]
-      setMessages([
-        {
-          id: "greeting",
-          role: "assistant",
-          content: `Hi ${firstName}, I'm the student support assistant. Tell me what's going on in your own words, and I'll help you work out the next step. If it's something that needs a person, I'll make sure you reach one.`,
-        },
-      ])
-      setIsLoadingHistory(false)
-    }, 700)
-
-    return () => clearTimeout(timer)
+    const firstName = parsed.name.trim().split(/\s+/)[0]
+    const greeting: ChatMessage = {
+      id: "greeting",
+      role: "assistant",
+      content: `Hi ${firstName}, I'm the student support assistant. Tell me what's going on in your own words, and I'll help you work out the next step. If it's something that needs a person, I'll make sure you reach one.`,
+    }
+    setMessages([greeting])
+    
+    async function loadHistory(conversationId: string) {
+      try {
+        const response = await fetch(`/api/conversations/${conversationId}`)
+        if (!response.ok) return
+        const data = (await response.json()) as { messages: ChatMessage[] }
+        if (data.messages.length > 0) {
+          setMessages([greeting, ...data.messages])
+        }
+      } catch (error) {
+        console.error("Failed to load conversation history:", error)
+      }
+    }
+    if (parsed.conversationId) void loadHistory(parsed.conversationId)
   }, [router])
 
   React.useEffect(() => {
@@ -137,20 +142,14 @@ export default function ChatPage() {
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-6">
-          {isLoadingHistory ? (
-            <ChatSkeleton />
-          ) : (
-            <>
-              {messages.map((message) => (
-                <MessageBubble
-                  key={message.id}
-                  message={message}
-                  studentInitials={studentInitials}
-                />
-              ))}
-              {isSending && <TypingIndicator />}
-            </>
-          )}
+          {messages.map((message) => (
+            <MessageBubble
+              key={message.id}
+              message={message}
+              studentInitials={studentInitials}
+            />
+          ))}
+          {isSending && <TypingIndicator />}
         </div>
       </div>
 
@@ -158,7 +157,7 @@ export default function ChatPage() {
         <div className="mx-auto w-full max-w-2xl px-4 py-3">
           <MessageComposer
             onSend={handleSend}
-            disabled={isLoadingHistory || isSending}
+            disabled={isSending}
           />
           <p className="mt-2 px-1 text-center text-[11px] text-muted-foreground">
             If you&apos;re in immediate danger, call 999. For urgent emotional

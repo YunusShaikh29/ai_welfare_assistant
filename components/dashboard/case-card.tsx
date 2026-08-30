@@ -146,7 +146,7 @@ export function CaseCard({
                 key={status}
                 size="sm"
                 variant={caseItem.status === status ? "default" : "outline"}
-                disabled={pending}
+                disabled={pending || !caseItem.claimedBy}
                 onClick={() => setStatus(status)}
               >
                 {STATUS_LABEL[status]}

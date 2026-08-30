@@ -39,10 +39,16 @@ export async function PATCH(
 
   const existing = await prisma.case.findUnique({
     where: { id },
-    select: { id: true },
+    select: { id: true, claimedBy: true },
   })
   if (!existing) {
     return NextResponse.json({ error: "Case not found." }, { status: 404 })
+  }
+  if (!existing.claimedBy) {
+    return NextResponse.json(
+      { error: "Claim the case before changing its status." },
+      { status: 409 }
+    )
   }
 
   const updated = await prisma.case.update({
