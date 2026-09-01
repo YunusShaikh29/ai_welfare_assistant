@@ -5,7 +5,7 @@ function knowledgeBaseBlock(): string {
     const note = resource.alwaysEscalate
       ? "\n  note: regulated or human-only topic. You may share the link, but the case must go to a person."
       : ""
-    return `- id: ${resource.id}\n  title: ${resource.title}\n  category: ${resource.category}\n  link: ${resource.link}\n  guidance: ${resource.guidance}${note}`
+    return `- id: ${resource.id}\n  title: ${resource.title}\n  category: ${resource.category}\n  use when: ${resource.triageHint}${note}`
   }).join("\n")
 }
 
